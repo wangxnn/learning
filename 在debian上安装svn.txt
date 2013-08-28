@@ -1,0 +1,149 @@
+http://onlyzq.blog.51cto.com/1228/596817
+
+在debian上安装SVN。 
+2011-06-26 21:12:15 
+标签：Debian svn onlyzq apache 休闲 
+ 
+
+ 版本信息：
+ Debain: 5.0
+ Kernel: 2.6.26-1-686
+ Subversion: 1.5.6
+ Apache: 2.2.11
+
+ 服务端：
+ 1、安装
+
+
+ apt-get install subversion subversion-tools
+ apt-get install apache2 libapache2-svn
+
+
+
+ 2、项目
+
+
+ mkdir /opt/linuxany -p
+ svnadmin create /opt/linuxany/test1
+ svnadmin create /opt/linuxany/test2
+
+ 3、配置
+ 1)vi /etc/apache2/httpd.conf
+
+
+#注意以下2行可能已在apache2中有配置了，如果restart时候发现错误，则注释掉即可
+LoadModule dav_svn_module modules/mod_dav_svn.so
+LoadModule authz_svn_module modules/mod_authz_svn.so
+
+#svn连接到服务器后的根目录，即/等同于/opt/linuxany(例如：svn list http://IP/test1)；若此处为/svn，则/svn等同于/opt/linuxany(例如：svn list http://IP/svn/test1)
+
+[Location /] 
+DAV svn
+SVNParentPath /opt/linuxany #[项目根目录]
+AuthzSVNAccessFile /opt/linuxany/authz.conf #[用户权限配置文件]
+AuthType Basic
+AuthName "Subversion.zoneyump"
+AuthUserFile /opt/linuxany/authfile #[用户密码配置文件]
+Require valid-user
+[/Location]
+
+2)vi /opt/linuxany/authz.conf
+
+
+[test1:/]    #[/opt/linuxany/test1下所有文件及目录]
+* = [所有用户都没有权限]
+lb = rw [lb用户用读写权限]
+
+[test2:/]
+* = r       #[所有用户都只有读权限]
+lb = rw
+
+3)生成authfile文件及添加用户
+
+
+htpasswd -c /opt/linuxany/authfile lb         #[-c: 生成authfile文件]
+htpasswd /opt/linuxany/authfile 用户名     #[添加用户]
+
+4)添加权限
+
+
+chmod 777 /opt/linuxany -R
+
+4、启动服务
+
+
+/etc/init.d/apache2 start
+svnserve -d
+
+5、导入数据
+
+
+svn import sourceDir file:///opt/linuxany/test1/targetDir -m "import info"
+
+6、连接
+在浏览器中输入”http://IP/test1″就能看到targetDir目录
+[或者]
+在终端输入”svn list http://IP/test1″
+
+客户端：
+对svn服务器数据的操作有两种方法：本地和远程
+1、本地
+1)把文件拷贝到本地
+
+
+cd /root/svnDir
+svn checkout http://IP/test1
+
+2)添加新的文件
+
+
+cp -a /root/dataDir /root/svnDir/test1
+cd /root/svnDir/test1
+svn add dataDir
+svn commit -m "add info"   #[将改动的文件提交到版本库]
+
+3)显示
+
+
+svn list dataDir
+
+4)还原
+
+
+svn update -r 200 dataDir #[把dataDir目录还原到版本200]
+
+5)删除
+
+
+svn delete dataDir -m "del info"
+
+6)查看变理记录
+
+
+svn log dataDir
+
+7)查看文件详细信息
+
+
+svn info dataDir
+
+2、远程
+1)显示
+
+
+svn list http://IP/test1
+
+2)导入数据
+
+
+svn import /root/dataDir http://IP/test1/dataDIr -m "import info"
+
+3)删除
+
+
+svn del http://IP/test1/dataDir -m "del info"
+
+4)查看日志
+
+
+svn log http://IP/test1
